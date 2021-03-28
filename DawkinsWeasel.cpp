@@ -4,72 +4,51 @@
 
 // Global settings:
 static constexpr unsigned short BAUD_RATE = 9600;
+static constexpr unsigned short SERIAL_BUFFER = 64;
 static constexpr unsigned short ASCII_START = 32;
 static constexpr unsigned short ASCII_ADDITIONAL = 95;
 
 // Simulation settings:
-static constexpr float P = 5; // (%)
-static constexpr unsigned short GEN_COPIES = 100;
+static constexpr unsigned short P = 5; // (%)
+static constexpr unsigned short GEN_COPIES = 100; // Maximum recommended value of 250, based on what model of Arduino you are using
 
+static char *targetArr = new char[SERIAL_BUFFER];
+static char *topArr = new char[SERIAL_BUFFER];
+static char *currentGen = new char[SERIAL_BUFFER*GEN_COPIES];
 static unsigned short strLen = 0;
-static String userInput;
-static unsigned short *targetIntArr;
-static unsigned short *topArr;
-static unsigned short newGenSize = strLen*GEN_COPIES;
-static unsigned short *currentGen;
 static unsigned short genIndex = 0;
 static unsigned short topArrIndex = 0;
 static unsigned short previousScore = 0;
 static unsigned short score = 0;
 
-//static unsigned short myArray = new unsigned short[MAX_ARRAY_LENGTH];
 
-
-String inputLoop() {
+void inputLoop() {
 	while(true) {
 		if(Serial.available() > 0) {
-			userInput = Serial.readStringUntil('\n');
+			strLen = Serial.readBytesUntil('\n', targetArr, SERIAL_BUFFER);
 			Serial.print("Target String: ");
-			Serial.println(userInput);
+			for(unsigned short i = 0; i < strLen; i += 1) {
+				Serial.print(targetArr[i]);
+			}
+
+			Serial.println();
 			break;
+
 		} else {
 			delay(100);
 		}
 	}
-
-	strLen = userInput.length();
-	return userInput;
 }
 
 
-unsigned short* convertStringToIntArr(String targetString) {
-	targetIntArr = new unsigned short[strLen];
-
-	Serial.print("Target Array: ");
+void initialGeneration() {
 	for(unsigned short i = 0; i < strLen; i += 1) {
-		targetIntArr[i] = (unsigned short)(targetString[i]);
-		Serial.print(targetIntArr[i]);
-	}
-
-	Serial.println();
-	return targetIntArr;
-}
-
-
-unsigned short* initialGeneration() {
-	topArr = new unsigned short[strLen];
-
-	for(unsigned short i = 0; i < strLen; i +=1) {
 		topArr[i] = rand() % ASCII_ADDITIONAL + ASCII_START;
 	}
-
-	return topArr;
 }
 
 
-void processGenerations(unsigned short* topArr, unsigned short* targetArr) {
-newGenSize = strLen*GEN_COPIES;
-currentGen = new unsigned short[newGenSize];
+void processGenerations() {
 genIndex = 0;
 topArrIndex = 0;
 previousScore = 0;
@@ -125,10 +104,9 @@ score = 0;
 
 void askTargetString() {
 	Serial.println("Input a Target String.");
-	String targetString = inputLoop();
-	targetIntArr = convertStringToIntArr(targetString);
-	topArr = initialGeneration();
-	processGenerations(topArr, targetIntArr);
+	inputLoop();
+	initialGeneration();
+	processGenerations();
 }
 
 
@@ -144,8 +122,4 @@ void setup() {
 
 void loop() {
 	askTargetString();
-
-	delete[] targetIntArr;
-	delete[] topArr;
-	delete[] currentGen;
 }
